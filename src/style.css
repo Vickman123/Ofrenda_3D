@@ -924,3 +924,116 @@ html, body {
     overflow-x: auto;
   }
 }
+
+/* ==========================================================================
+   BANNER GUÍA DE ALTAR VACÍO Y MODAL CREAR NUEVA OFRENDA
+   ========================================================================== */
+.empty-altar-banner {
+  position: absolute;
+  bottom: 110px;
+  left: 50%;
+  transform: translateX(-50%) translateY(8px);
+  background: rgba(18, 12, 26, 0.88);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 183, 3, 0.45);
+  border-radius: 999px;
+  padding: 10px 22px;
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.65), 0 0 24px rgba(255, 183, 3, 0.15);
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 12;
+}
+
+.empty-altar-banner.visible {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+}
+
+.empty-banner-content {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #faf5ef;
+  font-size: 13.5px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.empty-banner-icon {
+  font-size: 18px;
+  animation: pulseSpin 3.5s infinite ease-in-out;
+}
+
+@keyframes pulseSpin {
+  0%, 100% { transform: scale(1) rotate(0deg); }
+  50% { transform: scale(1.15) rotate(15deg); }
+}
+
+.empty-banner-text strong {
+  color: #ffb703;
+  font-weight: 700;
+}
+
+/* Selector mini de escenario para el modal */
+.scenario-mini-picker {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.mini-scen-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.mini-scen-btn:hover {
+  background: rgba(255, 183, 3, 0.1);
+  border-color: rgba(255, 183, 3, 0.35);
+}
+
+.mini-scen-btn.active {
+  border-color: #ffb703;
+  background: rgba(255, 183, 3, 0.18);
+  box-shadow: 0 0 14px rgba(255, 183, 3, 0.25);
+}
+
+.mini-scen-circle {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  flex-shrink: 0;
+}
+
+.modal-create-dialog {
+  max-width: 440px;
+}
+
+@media (max-width: 640px) {
+  .empty-altar-banner {
+    bottom: 135px;
+    padding: 8px 16px;
+    max-width: calc(100% - 32px);
+  }
+  .empty-banner-content {
+    font-size: 12px;
+    white-space: normal;
+    text-align: center;
+  }
+}
+

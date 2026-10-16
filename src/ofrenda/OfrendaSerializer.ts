@@ -1,15 +1,31 @@
 import type { OfrendaData, PlacedItemData } from '../types/ofrenda';
 
-const STORAGE_KEY = 'ofrendas3d_saved_state_v1';
+const STORAGE_KEY = 'ofrendas3d_saved_state_v2';
 
 export class OfrendaSerializer {
   /**
-   * Genera el estado inicial tradicional para un usuario nuevo.
+   * Genera el estado inicial tradicional limpio con las mesas vacías sin objetos.
    */
   public static createDefaultOfrenda(): OfrendaData {
     const now = Date.now();
+    return {
+      version: '1.0.0',
+      id: `ofrenda-${Math.random().toString(36).substring(2, 9)}`,
+      title: 'Ofrenda a la Memoria',
+      dedication: 'A quienes iluminaron nuestro camino y viven en nuestro recuerdo.',
+      theme: 'casa_mexicana',
+      items: [], // Mesa vacía por defecto
+      createdAt: now,
+      updatedAt: now,
+    };
+  }
+
+  /**
+   * Genera un ejemplo de ofrenda prediseñada con elementos tradicionales.
+   */
+  public static createSamplePredecoratedOfrenda(): OfrendaData {
+    const now = Date.now();
     const items: PlacedItemData[] = [
-      // Nivel 3 (Superior): Marco de homenaje central
       {
         instanceId: 'item-initial-frame',
         templateId: 'marco_foto',
@@ -22,7 +38,6 @@ export class OfrendaSerializer {
           dedication: 'Con amor y eterno recuerdo',
         },
       },
-      // Nivel 3: Flanqueado por dos veladoras
       {
         instanceId: 'item-initial-candle-top-l',
         templateId: 'veladora_vaso',
@@ -39,8 +54,6 @@ export class OfrendaSerializer {
         scale: 1.0,
         level: 3,
       },
-
-      // Nivel 2 (Medio): Calaverita de azúcar, Ramillete de Cempasúchil y Pan de Muerto
       {
         instanceId: 'item-initial-skull',
         templateId: 'calaverita_azucar',
@@ -68,8 +81,6 @@ export class OfrendaSerializer {
         scale: 1.05,
         level: 2,
       },
-
-      // Nivel 1 (Inferior): Copalero con humo, flores de cempasúchil y cazuela de mole
       {
         instanceId: 'item-initial-copal',
         templateId: 'copalero_incienso',
@@ -94,8 +105,6 @@ export class OfrendaSerializer {
         scale: 1.0,
         level: 1,
       },
-
-      // Nivel 0 (Suelo): Flores de cempasúchil y cirios altos
       {
         instanceId: 'item-initial-flower-ground-l',
         templateId: 'flor_cempasuchil',
@@ -135,7 +144,7 @@ export class OfrendaSerializer {
       id: `ofrenda-${Math.random().toString(36).substring(2, 9)}`,
       title: 'Ofrenda a la Memoria',
       dedication: 'A quienes iluminaron nuestro camino y viven en nuestro recuerdo.',
-      theme: 'noche_velas',
+      theme: 'casa_mexicana',
       items,
       createdAt: now,
       updatedAt: now,

@@ -199,6 +199,27 @@ export class OfrendaEditor {
   }
 
   /**
+   * Crea una nueva ofrenda limpia con las mesas vacías sin objetos.
+   */
+  public createNewOfrenda(title?: string, dedication?: string, theme?: OfrendaTheme): void {
+    this.data = OfrendaSerializer.createDefaultOfrenda();
+    if (title && title.trim()) this.data.title = title.trim();
+    if (dedication && dedication.trim()) this.data.dedication = dedication.trim();
+    if (theme) this.data.theme = theme;
+    this.initialSnapshot = JSON.stringify(this.data);
+    this.undoStack = [];
+    this.redoStack = [];
+    this.selectItem(null);
+    this.rebuildAllItems();
+    this.applyTheme(this.data.theme || 'casa_mexicana', false);
+    this.bridge.resetCamera();
+    this.save();
+    this.bridge.playSuccessSound();
+    this.notify('ofrendaUpdated', this.data);
+    this.notify('historyChanged');
+  }
+
+  /**
    * Reconstruye todos los elementos 3D a partir del estado de datos actual.
    */
   private rebuildAllItems(): void {

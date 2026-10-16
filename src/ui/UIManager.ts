@@ -1,6 +1,6 @@
 import { OfrendaEditor } from '../editor/OfrendaEditor';
 import { OFRENDA_CATALOG } from '../ofrenda/Catalog';
-import type { PlacedItemData } from '../types/ofrenda';
+import type { OfrendaTheme, PlacedItemData } from '../types/ofrenda';
 
 /**
  * UIManager gestiona la interfaz gráfica limpia, elegante y de alta fidelidad
@@ -22,6 +22,7 @@ export class UIManager {
     this.renderBaseUI();
     this.bindEvents();
     this.updateUndoRedoUI();
+    this.updateHeaderMeta(this.editor.getData());
   }
 
   private renderBaseUI(): void {
@@ -225,6 +226,14 @@ export class UIManager {
         </div>
       </footer>
 
+      <!-- BANNER GUÍA DE ALTAR VACÍO -->
+      <div class="empty-altar-banner ${data.items.length === 0 ? 'visible' : ''}" id="empty-altar-banner">
+        <div class="empty-banner-content">
+          <span class="empty-banner-icon">🌼</span>
+          <span class="empty-banner-text">Mesa lista para decorar — Selecciona un objeto abajo y pulsa <strong>+ Agregar</strong></span>
+        </div>
+      </div>
+
       <!-- 5. MODAL DE CONFIRMACIÓN DE RESET -->
       <div class="modal-backdrop" id="modal-reset">
         <div class="modal-dialog">
@@ -234,7 +243,7 @@ export class UIManager {
           </div>
           <div class="modal-body">
             <p class="modal-confirm-text">¿Restablecer la ofrenda a su estado inicial?</p>
-            <p class="modal-confirm-desc">Se eliminarán los objetos agregados y se restaurarán las posiciones, rotaciones y escalas originales del altar tradicional.</p>
+            <p class="modal-confirm-desc">Se eliminarán los objetos del altar y quedará la mesa limpia para comenzar a decorar de nuevo.</p>
           </div>
           <div class="modal-actions-row">
             <button class="btn-cancel" id="btn-reset-cancel">Cancelar</button>
@@ -346,6 +355,47 @@ export class UIManager {
           </div>
           <div class="modal-actions-row">
             <button class="btn-cancel full-w" id="btn-catalog-more-close">Cerrar</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 10. MODAL CREAR NUEVA OFRENDA -->
+      <div class="modal-backdrop" id="modal-create-new">
+        <div class="modal-dialog modal-create-dialog">
+          <div class="modal-header">
+            <div class="modal-icon-badge">🌼</div>
+            <h2>Crear una nueva ofrenda</h2>
+          </div>
+          <div class="modal-body">
+            <p class="modal-confirm-desc">Personaliza los detalles de tu ofrenda tradicional. Comenzarás con el altar limpio para colocar libremente velas, flores, calaveritas, fotos y ofrendas.</p>
+
+            <div class="form-group">
+              <label for="input-new-title">Título de la Ofrenda:</label>
+              <input type="text" id="input-new-title" value="${data.title || 'Ofrenda a la Memoria'}" maxlength="36" placeholder="Ej: Ofrenda a la Familia" />
+            </div>
+
+            <div class="form-group">
+              <label for="input-new-dedication">Dedicatoria general:</label>
+              <textarea id="input-new-dedication" rows="2" maxlength="140" placeholder="A quienes iluminaron nuestro camino y viven en nuestro recuerdo.">${data.dedication || 'A quienes iluminaron nuestro camino y viven en nuestro recuerdo.'}</textarea>
+            </div>
+
+            <div class="form-group">
+              <label>Escenario:</label>
+              <div class="scenario-mini-picker">
+                <button type="button" class="mini-scen-btn ${!isPanteon ? 'active' : ''}" data-theme-choice="casa_mexicana" id="choice-scen-casa">
+                  <span class="mini-scen-circle scen-casa-bg"></span>
+                  <span>Casa Mexicana</span>
+                </button>
+                <button type="button" class="mini-scen-btn ${isPanteon ? 'active' : ''}" data-theme-choice="panteon_nocturno" id="choice-scen-panteon">
+                  <span class="mini-scen-circle scen-panteon-bg"></span>
+                  <span>Panteón Nocturno</span>
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="modal-actions-row">
+            <button class="btn-cancel" id="btn-create-new-cancel">Cerrar</button>
+            <button class="btn-confirm-reset" id="btn-create-new-confirm">✨ Comenzar Ofrenda</button>
           </div>
         </div>
       </div>
@@ -561,6 +611,9 @@ export class UIManager {
 
     // 12. Modal de Foto en Portarretrato
     this.setupPhotoModalListeners();
+
+    // 13. Modal Crear Nueva Ofrenda
+    this.setupCreateNewModalListeners();
   }
 
   private updateUndoRedoUI(): void {
@@ -580,6 +633,64 @@ export class UIManager {
     const dedEl = this.container.querySelector('#ui-altar-dedication');
     if (titleEl) titleEl.textContent = data.title;
     if (dedEl) dedEl.textContent = data.dedication;
+
+    const banner = this.container.querySelector('#empty-altar-banner');
+    if (banner) {
+      banner.classList.toggle('visible', !data.items || data.items.length === 0);
+    }
+  }
+
+  private setupCreateNewModalListeners(): void {
+    const tabCrear = this.container.querySelector('#tab-crear');
+    const modalCreate = this.container.querySelector('#modal-create-new') as HTMLElement;
+    const inputNewTitle = this.container.querySelector('#input-new-title') as HTMLInputElement;
+    const inputNewDed = this.container.querySelector('#input-new-dedication') as HTMLTextAreaElement;
+    const btnCreateCancel = this.container.querySelector('#btn-create-new-cancel');
+    const btnCreateConfirm = this.container.querySelector('#btn-create-new-confirm');
+    const choiceCasa = this.container.querySelector('#choice-scen-casa');
+    const choicePanteon = this.container.querySelector('#choice-scen-panteon');
+
+    let chosenTheme: OfrendaTheme = (this.editor.getData().theme || 'casa_mexicana') as OfrendaTheme;
+
+    choiceCasa?.addEventListener('click', () => {
+      chosenTheme = 'casa_mexicana';
+      choiceCasa.classList.add('active');
+      choicePanteon?.classList.remove('active');
+    });
+
+    choicePanteon?.addEventListener('click', () => {
+      chosenTheme = 'panteon_nocturno';
+      choicePanteon.classList.add('active');
+      choiceCasa?.classList.remove('active');
+    });
+
+    tabCrear?.addEventListener('click', () => {
+      const data = this.editor.getData();
+      if (inputNewTitle) inputNewTitle.value = data.title;
+      if (inputNewDed) inputNewDed.value = data.dedication;
+      modalCreate?.classList.add('open');
+      this.editor.bridge.playClickSound();
+    });
+
+    btnCreateCancel?.addEventListener('click', () => {
+      modalCreate?.classList.remove('open');
+      localStorage.setItem('ofrendas3d_has_started', 'true');
+    });
+
+    btnCreateConfirm?.addEventListener('click', () => {
+      const title = inputNewTitle?.value.trim() || 'Ofrenda a la Memoria';
+      const ded = inputNewDed?.value.trim() || 'A quienes iluminaron nuestro camino y viven en nuestro recuerdo.';
+      this.editor.createNewOfrenda(title, ded, chosenTheme);
+      modalCreate?.classList.remove('open');
+      localStorage.setItem('ofrendas3d_has_started', 'true');
+    });
+
+    // En la primera visita (sin ofrenda compartida por URL), desplegar la bienvenida
+    const isShared = window.location.hash.startsWith('#share=');
+    const hasStarted = localStorage.getItem('ofrendas3d_has_started');
+    if (!isShared && !hasStarted) {
+      modalCreate?.classList.add('open');
+    }
   }
 
   private updateThemeUI(theme: any): void {
