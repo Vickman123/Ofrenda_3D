@@ -71,21 +71,23 @@ export class OfrendaAltar {
       const prevY = this.levels[i - 1].y;
       const stepH = lvl.y - prevY;
 
-      // 1. Bloque estructural del escalón
-      const boxGeo = new THREE.BoxGeometry(lvl.width, stepH, lvl.depth);
+      // 1. Bloque estructural de madera (termina exactamente debajo del mantel para evitar z-fighting)
+      const clothThickness = 0.016;
+      const woodHeight = Math.max(0.01, stepH - clothThickness);
+      const boxGeo = new THREE.BoxGeometry(lvl.width, woodHeight, lvl.depth);
       this.geometries.push(boxGeo);
       const stepMesh = new THREE.Mesh(boxGeo, woodMat);
-      stepMesh.position.set(0, prevY + stepH / 2, lvl.centerZ);
+      stepMesh.position.set(0, prevY + woodHeight / 2, lvl.centerZ);
       stepMesh.castShadow = true;
       stepMesh.receiveShadow = true;
       this.group.add(stepMesh);
 
-      // 2. Mantel superior con vuelo
-      const clothGeo = new THREE.BoxGeometry(lvl.width + 0.04, 0.02, lvl.depth + 0.04);
+      // 2. Mantel superior con vuelo frontal limpio
+      const clothGeo = new THREE.BoxGeometry(lvl.width + 0.04, clothThickness, lvl.depth + 0.04);
       this.geometries.push(clothGeo);
       const activeClothMat = i === 2 ? purpleClothMat : clothMat;
       const clothMesh = new THREE.Mesh(clothGeo, activeClothMat);
-      clothMesh.position.set(0, lvl.y - 0.01, lvl.centerZ);
+      clothMesh.position.set(0, lvl.y - clothThickness / 2, lvl.centerZ);
       clothMesh.castShadow = true;
       clothMesh.receiveShadow = true;
       this.group.add(clothMesh);

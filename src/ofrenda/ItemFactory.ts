@@ -51,6 +51,9 @@ export class ItemFactory {
       case 'plato_frutas':
         result = this.createPlatoFrutas();
         break;
+      case 'guitarra':
+        result = this.createGuitarra();
+        break;
       default:
         result = this.createFlorCempasuchil();
         break;
@@ -71,11 +74,14 @@ export class ItemFactory {
       customData: data.customData,
     };
 
-    // Habilitar sombras en todos los meshes
+    // Habilitar sombras en mallas opacas (evita auto-sombras erráticas en transparentes)
     group.traverse((child) => {
       if ((child as THREE.Mesh).isMesh) {
-        child.castShadow = true;
-        child.receiveShadow = true;
+        const mesh = child as THREE.Mesh;
+        const mat = mesh.material;
+        const isTransparent = Array.isArray(mat) ? mat.some((m) => m.transparent) : mat.transparent;
+        mesh.castShadow = !isTransparent && mesh.name !== 'flame';
+        mesh.receiveShadow = true;
       }
     });
 
@@ -124,21 +130,20 @@ export class ItemFactory {
     flame.position.y = 0.125;
     group.add(flame);
 
-    // Luz puntual titilante cálida
-    const light = new THREE.PointLight(0xffa233, 1.4, 2.5);
+    // Luz puntual cálida (sin sombras de punto para eliminar parpadeo y z-fighting)
+    const light = new THREE.PointLight(0xffa233, 1.15, 2.2, 2.0);
     light.position.set(0, 0.15, 0);
-    light.castShadow = true;
-    light.shadow.bias = -0.002;
+    light.castShadow = false;
     group.add(light);
 
     const updatable: UpdatableItem = {
       update: (_delta, elapsed) => {
-        // Titileo orgánico suave usando ondas senoidales combinadas
-        const flicker = Math.sin(elapsed * 9) * 0.15 + Math.cos(elapsed * 17) * 0.1 + Math.sin(elapsed * 23) * 0.08;
-        light.intensity = 1.3 + flicker;
-        flame.scale.y = 1.0 + flicker * 0.5;
-        flame.scale.x = 1.0 - flicker * 0.2;
-        flame.scale.z = 1.0 - flicker * 0.2;
+        // Titileo orgánico concentrado en la geometría y emisividad de la flama
+        const s = Math.sin(elapsed * 7) * 0.08 + Math.cos(elapsed * 13) * 0.04;
+        flame.scale.set(1.0 - s * 0.15, 1.0 + s * 0.35, 1.0 - s * 0.15);
+        (flameMat as THREE.MeshStandardMaterial).emissiveIntensity = 2.2 + s * 0.3;
+        // La intensidad de la luz es ultra estable para evitar destellos globales
+        light.intensity = 1.15 + s * 0.03;
       },
       dispose: () => {
         glassGeo.dispose();
@@ -184,15 +189,17 @@ export class ItemFactory {
     flame.position.y = 0.29;
     group.add(flame);
 
-    const light = new THREE.PointLight(0xffb040, 1.2, 2.8);
+    const light = new THREE.PointLight(0xffb040, 1.05, 2.4, 2.0);
     light.position.set(0, 0.31, 0);
+    light.castShadow = false;
     group.add(light);
 
     const updatable: UpdatableItem = {
       update: (_delta, elapsed) => {
-        const flicker = Math.sin(elapsed * 11) * 0.12 + Math.cos(elapsed * 15) * 0.08;
-        light.intensity = 1.2 + flicker;
-        flame.scale.y = 1.0 + flicker * 0.4;
+        const s = Math.sin(elapsed * 6) * 0.08;
+        flame.scale.y = 1.0 + s * 0.25;
+        (flameMat as THREE.MeshStandardMaterial).emissiveIntensity = 2.4 + s * 0.3;
+        light.intensity = 1.05 + s * 0.02;
       },
       dispose: () => {
         bodyGeo.dispose();
@@ -670,6 +677,104 @@ export class ItemFactory {
       fruit.scale.set(1.05, 0.9, 1.05);
       group.add(fruit);
     });
+
+    return { group };
+  }
+
+  /**
+   * 12. Guitarra tradicional mexicana en madera acústica
+   */
+  private static createGuitarra(): { group: THREE.Group } {
+    const group = new THREE.Group();
+    group.name = 'GuitarraMexicana';
+
+    // Madera cálida para tapa armónica
+    const bodyMat = new THREE.MeshStandardMaterial({
+      color: 0xc87d32,
+      roughness: 0.45,
+      metalness: 0.05,
+    });
+    // Madera oscura para aros, puente y mástil
+    const darkWoodMat = new THREE.MeshStandardMaterial({
+      color: 0x3d1f0d,
+      roughness: 0.6,
+      metalness: 0.05,
+    });
+    const boneMat = new THREE.MeshStandardMaterial({ color: 0xfdfbf7, roughness: 0.3 });
+    const stringMat = new THREE.MeshBasicMaterial({ color: 0xe2e8f0 });
+
+    // 1. Cuerpo inferior de la guitarra
+    const lowerBoutGeo = new THREE.CylinderGeometry(0.13, 0.13, 0.045, 20);
+    const lowerBout = new THREE.Mesh(lowerBoutGeo, bodyMat);
+    lowerBout.rotation.x = Math.PI / 2;
+    lowerBout.position.set(0, 0.13, 0);
+    group.add(lowerBout);
+
+    // 2. Cuerpo superior de la guitarra
+    const upperBoutGeo = new THREE.CylinderGeometry(0.095, 0.095, 0.044, 20);
+    const upperBout = new THREE.Mesh(upperBoutGeo, bodyMat);
+    upperBout.rotation.x = Math.PI / 2;
+    upperBout.position.set(0, 0.28, 0);
+    group.add(upperBout);
+
+    // Cintura
+    const waistGeo = new THREE.BoxGeometry(0.18, 0.15, 0.044);
+    const waist = new THREE.Mesh(waistGeo, bodyMat);
+    waist.position.set(0, 0.2, 0);
+    group.add(waist);
+
+    // 3. Boca / Roseta decorativa
+    const holeGeo = new THREE.CylinderGeometry(0.035, 0.035, 0.046, 16);
+    const holeMat = new THREE.MeshBasicMaterial({ color: 0x1a0f05 });
+    const hole = new THREE.Mesh(holeGeo, holeMat);
+    hole.rotation.x = Math.PI / 2;
+    hole.position.set(0, 0.24, 0.001);
+    group.add(hole);
+
+    const rosetteGeo = new THREE.TorusGeometry(0.04, 0.005, 8, 20);
+    const rosette = new THREE.Mesh(rosetteGeo, boneMat);
+    rosette.position.set(0, 0.24, 0.024);
+    group.add(rosette);
+
+    // 4. Puente
+    const bridgeGeo = new THREE.BoxGeometry(0.1, 0.02, 0.012);
+    const bridge = new THREE.Mesh(bridgeGeo, darkWoodMat);
+    bridge.position.set(0, 0.12, 0.026);
+    group.add(bridge);
+
+    // 5. Mástil y diapasón
+    const neckGeo = new THREE.BoxGeometry(0.035, 0.28, 0.022);
+    const neck = new THREE.Mesh(neckGeo, darkWoodMat);
+    neck.position.set(0, 0.48, 0.008);
+    group.add(neck);
+
+    // 6. Clavijero / Pala
+    const headGeo = new THREE.BoxGeometry(0.042, 0.11, 0.018);
+    const head = new THREE.Mesh(headGeo, darkWoodMat);
+    head.position.set(0, 0.66, 0.002);
+    head.rotation.x = -0.15;
+    group.add(head);
+
+    // Clavijas de afinación
+    for (let i = 0; i < 3; i++) {
+      const pegGeo = new THREE.CylinderGeometry(0.005, 0.005, 0.06, 8);
+      const peg = new THREE.Mesh(pegGeo, boneMat);
+      peg.rotation.z = Math.PI / 2;
+      peg.position.set(0, 0.63 + i * 0.028, 0);
+      group.add(peg);
+    }
+
+    // 7. Cuerdas
+    for (let s = -2; s <= 2; s++) {
+      const stringGeo = new THREE.BoxGeometry(0.002, 0.5, 0.002);
+      const stringMesh = new THREE.Mesh(stringGeo, stringMat);
+      stringMesh.position.set(s * 0.005, 0.37, 0.025);
+      group.add(stringMesh);
+    }
+
+    // Inclinación natural
+    group.rotation.z = 0.15;
+    group.rotation.y = 0.25;
 
     return { group };
   }

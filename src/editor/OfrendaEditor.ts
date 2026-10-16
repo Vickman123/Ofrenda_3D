@@ -8,7 +8,12 @@ import { OFRENDA_CATALOG } from '../ofrenda/Catalog';
 import { OFRENDA_THEMES } from '../ofrenda/Themes';
 import type { OfrendaData, OfrendaTheme, PlacedItemData } from '../types/ofrenda';
 
-export type EditorEvent = 'selectionChanged' | 'ofrendaUpdated' | 'themeChanged';
+export type EditorEvent = 
+  | 'selectionChanged' 
+  | 'ofrendaUpdated' 
+  | 'themeChanged' 
+  | 'historyChanged';
+
 export type EditorListener = (event: EditorEvent, payload?: any) => void;
 
 /**
@@ -28,6 +33,13 @@ export class OfrendaEditor {
   private selectionHalo: THREE.Mesh | null = null;
   private listeners: Set<EditorListener> = new Set();
 
+  /** Snapshot inmutable del estado inicial de la ofrenda */
+  private initialSnapshot: string = '';
+
+  /** Pilas de historial para Deshacer (Undo) y Rehacer (Redo) */
+  private undoStack: string[] = [];
+  private redoStack: string[] = [];
+
   constructor(containerSelector: string = '#app-viewport') {
     this.bridge = new VXRBridge(containerSelector);
     this.altar = new OfrendaAltar();
@@ -38,13 +50,13 @@ export class OfrendaEditor {
   }
 
   /**
-   * Inicializa la ofrenda, cargando datos locales o desde la URL.
+   * Inicializa la ofrenda, cargando datos locales o desde la URL y guardando el snapshot inicial.
    */
   public init(): void {
     // 1. Agregar el altar de 3 niveles a la escena de VXR
     this.bridge.addToScene(this.altar.group);
 
-    // 2. Determinar estado de la ofrenda (URL compartida o guardada localmente)
+    // 2. Determinar estado de la ofrenda
     const urlData = OfrendaSerializer.parseFromUrl();
     if (urlData) {
       this.data = urlData;
@@ -53,13 +65,16 @@ export class OfrendaEditor {
       this.data = OfrendaSerializer.loadFromLocalStorage();
     }
 
-    // 3. Aplicar tema lumínico
-    this.applyTheme(this.data.theme || 'noche_velas');
+    // 3. Crear snapshot inmutable antes de cualquier modificación
+    this.initialSnapshot = JSON.stringify(this.data);
 
-    // 4. Instanciar todos los objetos de la ofrenda en 3D
+    // 4. Aplicar tema lumínico inicial
+    this.applyTheme(this.data.theme || 'casa_mexicana', false);
+
+    // 5. Instanciar todos los objetos de la ofrenda en 3D
     this.rebuildAllItems();
 
-    // 5. Conectar loop de actualización de VXR Core para animaciones
+    // 6. Conectar loop de actualización de VXR Core para animaciones suaves
     this.bridge.onUpdate((delta, elapsed) => {
       this.itemUpdatables.forEach((updatable) => {
         try {
@@ -67,36 +82,120 @@ export class OfrendaEditor {
         } catch {}
       });
 
-      // Animar suavemente el halo de selección si está activo
+      // Animar suavemente el halo de selección sin z-fighting
       if (this.selectionHalo && this.selectionHalo.visible) {
         this.selectionHalo.rotation.z += delta * 1.5;
       }
     });
 
-    // 6. Conectar raycast de selección con clics del puntero
+    // 7. Conectar raycast de selección con clics del puntero
     this.setupPointerInteractions();
 
-    // 7. Iniciar el renderizado
+    // 8. Iniciar el renderizado
     this.bridge.start();
     this.notify('ofrendaUpdated', this.data);
+    this.notify('historyChanged');
   }
 
   /**
-   * Crea el indicador visual circular de selección.
+   * Crea el indicador visual circular de selección con depthWrite desactivado.
    */
   private createSelectionHalo(): void {
-    const haloGeo = new THREE.RingGeometry(0.12, 0.16, 24);
+    const haloGeo = new THREE.RingGeometry(0.12, 0.16, 28);
     const haloMat = new THREE.MeshBasicMaterial({
       color: 0xffb703,
       side: THREE.DoubleSide,
       transparent: true,
-      opacity: 0.85,
+      opacity: 0.9,
+      depthWrite: false, // Evita z-fighting con los manteles y escalones
+      polygonOffset: true,
+      polygonOffsetFactor: -2,
+      polygonOffsetUnits: -2,
     });
     this.selectionHalo = new THREE.Mesh(haloGeo, haloMat);
     this.selectionHalo.rotation.x = -Math.PI / 2;
     this.selectionHalo.visible = false;
     this.selectionHalo.name = 'Ofrenda_SelectionHalo';
     this.bridge.addToScene(this.selectionHalo);
+  }
+
+  /**
+   * Guarda el estado actual en el historial para Deshacer.
+   */
+  private recordState(): void {
+    const snapshot = JSON.stringify(this.data);
+    this.undoStack.push(snapshot);
+    if (this.undoStack.length > 25) {
+      this.undoStack.shift();
+    }
+    this.redoStack = [];
+    this.notify('historyChanged');
+  }
+
+  public canUndo(): boolean {
+    return this.undoStack.length > 0;
+  }
+
+  public canRedo(): boolean {
+    return this.redoStack.length > 0;
+  }
+
+  /**
+   * Deshacer el último cambio.
+   */
+  public undo(): boolean {
+    if (this.undoStack.length === 0) return false;
+    const current = JSON.stringify(this.data);
+    this.redoStack.push(current);
+
+    const prev = this.undoStack.pop()!;
+    this.data = JSON.parse(prev);
+    this.selectItem(null);
+    this.rebuildAllItems();
+    this.applyTheme(this.data.theme, false);
+    this.save();
+    this.bridge.playClickSound();
+    this.notify('ofrendaUpdated', this.data);
+    this.notify('historyChanged');
+    return true;
+  }
+
+  /**
+   * Rehacer el cambio deshecho.
+   */
+  public redo(): boolean {
+    if (this.redoStack.length === 0) return false;
+    const current = JSON.stringify(this.data);
+    this.undoStack.push(current);
+
+    const next = this.redoStack.pop()!;
+    this.data = JSON.parse(next);
+    this.selectItem(null);
+    this.rebuildAllItems();
+    this.applyTheme(this.data.theme, false);
+    this.save();
+    this.bridge.playClickSound();
+    this.notify('ofrendaUpdated', this.data);
+    this.notify('historyChanged');
+    return true;
+  }
+
+  /**
+   * Restablece la ofrenda a su estado inicial inmutable.
+   */
+  public resetToInitial(): void {
+    if (!this.initialSnapshot) return;
+    this.data = JSON.parse(this.initialSnapshot);
+    this.undoStack = [];
+    this.redoStack = [];
+    this.selectItem(null);
+    this.rebuildAllItems();
+    this.applyTheme(this.data.theme, false);
+    this.bridge.resetCamera();
+    this.save();
+    this.bridge.playSuccessSound();
+    this.notify('ofrendaUpdated', this.data);
+    this.notify('historyChanged');
   }
 
   /**
@@ -135,15 +234,12 @@ export class OfrendaEditor {
     });
 
     dom.addEventListener('pointerup', (e) => {
-      // Ignorar si fue arrastre de cámara (órbita)
       const dist = Math.hypot(e.clientX - downPos.x, e.clientY - downPos.y);
       const duration = Date.now() - downTime;
       if (dist > 8 || duration > 400) return;
 
-      // Ejecutar raycasting de VXR Core
       const hits = this.bridge.raycastPointer(e);
 
-      // Buscar si el impacto corresponde a un objeto de la ofrenda
       let foundInstanceId: string | null = null;
       for (const hit of hits) {
         let cur: THREE.Object3D | null = hit.object;
@@ -168,9 +264,9 @@ export class OfrendaEditor {
     const template = OFRENDA_CATALOG.find((t) => t.id === templateId);
     if (!template) return null;
 
-    // Calcular posición automática razonable en el altar
-    const { position, level } = this.placement.calculateAutoPosition(template, this.data.items);
+    this.recordState();
 
+    const { position, level } = this.placement.calculateAutoPosition(template, this.data.items);
     const instanceId = `item-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
     const newItem: PlacedItemData = {
       instanceId,
@@ -182,7 +278,6 @@ export class OfrendaEditor {
       customData: customData || (templateId === 'calaverita_azucar' ? { personName: 'MÉXICO' } : undefined),
     };
 
-    // Crear modelo 3D
     const { group, updatable } = ItemFactory.createItem(newItem);
     this.bridge.addToScene(group);
     this.itemMeshes.set(instanceId, group);
@@ -193,7 +288,6 @@ export class OfrendaEditor {
     this.data.items.push(newItem);
     this.selectItem(instanceId);
 
-    // Audio de éxito y guardado
     this.bridge.playSuccessSound();
     this.save();
     this.notify('ofrendaUpdated', this.data);
@@ -210,8 +304,8 @@ export class OfrendaEditor {
     if (instanceId && this.itemMeshes.has(instanceId)) {
       const mesh = this.itemMeshes.get(instanceId)!;
       if (this.selectionHalo) {
-        this.selectionHalo.position.set(mesh.position.x, mesh.position.y + 0.01, mesh.position.z);
-        this.selectionHalo.scale.setScalar(mesh.scale.x * 1.1);
+        this.selectionHalo.position.set(mesh.position.x, mesh.position.y + 0.005, mesh.position.z);
+        this.selectionHalo.scale.setScalar(mesh.scale.x * 1.15);
         this.selectionHalo.visible = true;
       }
       this.bridge.playClickSound();
@@ -227,12 +321,18 @@ export class OfrendaEditor {
   /**
    * Rota el objeto seleccionado en grados (ej: +45° o -45°).
    */
-  public rotateSelectedItem(deltaDegrees: number): void {
-    if (!this.selectedId) return;
+  public rotateSelectedItem(deltaDegrees: number = 45): void {
+    if (!this.selectedId) {
+      if (this.data.items.length > 0) {
+        this.selectItem(this.data.items[0].instanceId);
+      }
+      return;
+    }
     const item = this.data.items.find((i) => i.instanceId === this.selectedId);
     const mesh = this.itemMeshes.get(this.selectedId);
     if (!item || !mesh) return;
 
+    this.recordState();
     item.rotationY = (item.rotationY + (deltaDegrees * Math.PI) / 180) % (Math.PI * 2);
     mesh.rotation.y = item.rotationY;
 
@@ -242,18 +342,28 @@ export class OfrendaEditor {
   }
 
   /**
-   * Escala el objeto seleccionado.
+   * Escala el objeto seleccionado cíclicamente o por factor.
    */
-  public scaleSelectedItem(deltaFactor: number): void {
-    if (!this.selectedId) return;
+  public scaleSelectedItem(deltaFactor: number = 1.15): void {
+    if (!this.selectedId) {
+      if (this.data.items.length > 0) {
+        this.selectItem(this.data.items[0].instanceId);
+      }
+      return;
+    }
     const item = this.data.items.find((i) => i.instanceId === this.selectedId);
     const mesh = this.itemMeshes.get(this.selectedId);
     if (!item || !mesh) return;
 
-    item.scale = Math.max(0.6, Math.min(1.8, Number((item.scale * deltaFactor).toFixed(2))));
+    this.recordState();
+    let newScale = Number((item.scale * deltaFactor).toFixed(2));
+    if (newScale > 1.6) newScale = 0.8;
+    if (newScale < 0.7) newScale = 1.0;
+    item.scale = newScale;
+
     mesh.scale.setScalar(item.scale);
     if (this.selectionHalo) {
-      this.selectionHalo.scale.setScalar(item.scale * 1.1);
+      this.selectionHalo.scale.setScalar(item.scale * 1.15);
     }
 
     this.bridge.playClickSound();
@@ -262,19 +372,26 @@ export class OfrendaEditor {
   }
 
   /**
-   * Mueve el objeto seleccionado a otro nivel del altar (0 a 3).
+   * Mueve el objeto seleccionado al siguiente nivel o a uno específico.
    */
-  public moveSelectedItemLevel(newLevel: number): void {
-    if (!this.selectedId) return;
+  public moveSelectedItemLevel(targetLevel?: number): void {
+    if (!this.selectedId) {
+      if (this.data.items.length > 0) {
+        this.selectItem(this.data.items[0].instanceId);
+      }
+      return;
+    }
     const item = this.data.items.find((i) => i.instanceId === this.selectedId);
     const mesh = this.itemMeshes.get(this.selectedId);
     if (!item || !mesh) return;
 
-    this.placement.moveItemToLevel(item, newLevel);
+    this.recordState();
+    const nextLevel = targetLevel !== undefined ? targetLevel : (item.level + 1) % 4;
+    this.placement.moveItemToLevel(item, nextLevel);
     mesh.position.set(item.position[0], item.position[1], item.position[2]);
 
     if (this.selectionHalo) {
-      this.selectionHalo.position.set(mesh.position.x, mesh.position.y + 0.01, mesh.position.z);
+      this.selectionHalo.position.set(mesh.position.x, mesh.position.y + 0.005, mesh.position.z);
     }
 
     this.bridge.playClickSound();
@@ -290,9 +407,9 @@ export class OfrendaEditor {
     const item = this.data.items.find((i) => i.instanceId === this.selectedId);
     if (!item) return;
 
+    this.recordState();
     item.customData = { ...item.customData, ...customData };
 
-    // Reinstanciar este objeto específico para aplicar la nueva textura
     const oldMesh = this.itemMeshes.get(this.selectedId);
     if (oldMesh) this.bridge.removeFromScene(oldMesh);
     if (this.itemUpdatables.has(this.selectedId)) {
@@ -318,9 +435,9 @@ export class OfrendaEditor {
    */
   public deleteSelectedItem(): void {
     if (!this.selectedId) return;
+    this.recordState();
     const id = this.selectedId;
 
-    // Remover malla de la escena
     const mesh = this.itemMeshes.get(id);
     if (mesh) {
       this.bridge.removeFromScene(mesh);
@@ -332,7 +449,6 @@ export class OfrendaEditor {
       this.itemUpdatables.delete(id);
     }
 
-    // Remover de datos
     this.data.items = this.data.items.filter((i) => i.instanceId !== id);
     this.selectItem(null);
 
@@ -342,20 +458,34 @@ export class OfrendaEditor {
   }
 
   /**
-   * Aplica un tema de ambiente lumínico.
+   * Aplica un tema de ambiente lumínico con opción de registrar en el historial.
    */
-  public applyTheme(themeKey: OfrendaTheme): void {
-    const config = OFRENDA_THEMES[themeKey] || OFRENDA_THEMES.noche_velas;
-    this.data.theme = themeKey;
+  public applyTheme(themeKey: string, recordHistory: boolean = true): void {
+    const config = OFRENDA_THEMES[themeKey] || OFRENDA_THEMES.casa_mexicana;
+    if (recordHistory && this.data.theme !== themeKey) {
+      this.recordState();
+    }
+    this.data.theme = themeKey as OfrendaTheme;
     this.bridge.applyTheme(config);
     this.save();
     this.notify('themeChanged', config);
   }
 
   /**
+   * Alterna entre Casa Mexicana y Panteón Nocturno.
+   */
+  public toggleTheme(): void {
+    const nextTheme = (this.data.theme === 'panteon_nocturno' || this.data.theme === 'noche_velas')
+      ? 'casa_mexicana'
+      : 'panteon_nocturno';
+    this.applyTheme(nextTheme, true);
+  }
+
+  /**
    * Actualiza el título y dedicatoria general de la ofrenda.
    */
   public updateMetadata(title: string, dedication: string): void {
+    this.recordState();
     this.data.title = title;
     this.data.dedication = dedication;
     this.save();

@@ -9,16 +9,18 @@ export type ItemCategory =
   | 'comida' 
   | 'marcos' 
   | 'incienso' 
+  | 'musica'
   | 'papel_picado';
 
 export interface ItemTemplate {
   id: string;
   name: string;
+  shortName: string;
   category: ItemCategory;
   description: string;
   defaultScale: number;
-  recommendedLevel: 1 | 2 | 3;
-  icon: string; // Emoji o identificador de icono
+  recommendedLevel: 0 | 1 | 2 | 3;
+  icon: string;
 }
 
 export interface PlacedItemData {
@@ -35,7 +37,12 @@ export interface PlacedItemData {
   };
 }
 
-export type OfrendaTheme = 'noche_velas' | 'tarde_dorada' | 'altar_mistico';
+export type OfrendaTheme = 
+  | 'casa_mexicana' 
+  | 'panteon_nocturno' 
+  | 'noche_velas' 
+  | 'tarde_dorada' 
+  | 'altar_mistico';
 
 export interface ThemeConfig {
   id: OfrendaTheme;
@@ -49,6 +56,7 @@ export interface ThemeConfig {
   keyLightIntensity: number;
   accentLightColor: number;
   accentLightIntensity: number;
+  previewUrl?: string;
 }
 
 export interface OfrendaData {
