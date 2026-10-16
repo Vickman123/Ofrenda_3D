@@ -1037,3 +1037,415 @@ html, body {
   }
 }
 
+/* ==========================================================================
+   ESTILOS DE CÓDIGO QR Y REALIDAD AUMENTADA (AR)
+   ========================================================================== */
+
+/* Modal de Compartir expandido */
+.modal-share-dialog {
+  max-width: 460px;
+}
+
+/* Switch Toggle de AR */
+.ar-share-toggle-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: linear-gradient(135deg, rgba(255, 183, 3, 0.12) 0%, rgba(255, 120, 0, 0.06) 100%);
+  border: 1px solid rgba(255, 183, 3, 0.35);
+  border-radius: 14px;
+  padding: 12px 16px;
+}
+
+.ar-toggle-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ar-toggle-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+  color: #ffb703;
+}
+
+.ar-cam-icon {
+  font-size: 16px;
+}
+
+.ar-toggle-desc {
+  font-size: 11.5px;
+  color: var(--text-dim);
+  line-height: 1.35;
+}
+
+/* Switch Toggle */
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 46px;
+  height: 26px;
+  flex-shrink: 0;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  transition: 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  border-radius: 34px;
+}
+
+.toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  border-radius: 50%;
+}
+
+.toggle-switch input:checked + .toggle-slider {
+  background: linear-gradient(135deg, #ffb703 0%, #ff7800 100%);
+  border-color: #ffb703;
+  box-shadow: 0 0 10px rgba(255, 183, 3, 0.4);
+}
+
+.toggle-switch input:checked + .toggle-slider:before {
+  transform: translateX(20px);
+}
+
+/* Contenedor del Código QR */
+.qr-container-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 16px;
+  border: 1px dashed rgba(255, 183, 3, 0.25);
+}
+
+.qr-frame {
+  background: #ffffff;
+  padding: 10px;
+  border-radius: 14px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 0 16px rgba(255, 183, 3, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#qr-code-canvas {
+  width: 190px !important;
+  height: 190px !important;
+  display: block;
+}
+
+.qr-helper-text {
+  font-size: 12px;
+  color: var(--text-sub);
+  text-align: center;
+}
+
+/* Helper de IP Local */
+.local-ip-hint {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 8px 12px;
+  border-radius: 10px;
+}
+
+.local-ip-hint label {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.ip-input-row {
+  display: flex;
+  gap: 8px;
+}
+
+.ip-input-row input {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 12px;
+  color: #fff;
+  font-family: monospace;
+}
+
+.btn-refresh-qr {
+  background: rgba(255, 183, 3, 0.15);
+  border: 1px solid var(--cempasuchil-gold);
+  color: var(--cempasuchil-gold);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-refresh-qr:hover {
+  background: var(--cempasuchil-gold);
+  color: #140d1f;
+}
+
+/* Botones de acción modal */
+.split-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.btn-try-ar {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 183, 3, 0.3);
+  color: #ffb703;
+  padding: 9px 16px;
+  border-radius: 10px;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.btn-try-ar:hover {
+  background: rgba(255, 183, 3, 0.2);
+  transform: translateY(-1px);
+}
+
+/* Modal de Bienvenida AR */
+.modal-ar-welcome-dialog {
+  max-width: 440px;
+}
+
+.ar-instructions-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.ar-inst-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12.5px;
+  color: #faf5ef;
+}
+
+.ar-inst-icon {
+  font-size: 16px;
+}
+
+.ar-inst-item strong {
+  color: #ffb703;
+}
+
+/* Video de cámara en vivo en segundo plano */
+#ar-camera-feed {
+  position: absolute;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  object-fit: cover;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* Ocultar interfaz estándar cuando AR está activo */
+body.ar-active-mode .top-nav,
+body.ar-active-mode .left-panel-card,
+body.ar-active-mode .right-toolbar,
+body.ar-active-mode .bottom-catalog-tray,
+body.ar-active-mode .empty-altar-banner {
+  display: none !important;
+}
+
+body.ar-active-mode #app-viewport {
+  background: transparent !important;
+}
+
+/* INTERFAZ HUD DE REALIDAD AUMENTADA */
+.ar-hud-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 100;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 20px 16px;
+}
+
+.ar-hud-overlay.active {
+  display: flex;
+}
+
+.ar-top-hud {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  pointer-events: auto;
+}
+
+.ar-live-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(18, 12, 26, 0.82);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 183, 3, 0.5);
+  border-radius: 999px;
+  padding: 7px 16px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #fff;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.ar-pulse-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 8px #22c55e;
+  animation: pulseDot 1.5s infinite;
+}
+
+@keyframes pulseDot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.8); }
+}
+
+.ar-top-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.btn-ar-hud {
+  background: rgba(18, 12, 26, 0.82);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+  padding: 7px 14px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.btn-ar-hud:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: #fff;
+}
+
+.btn-ar-exit {
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #fca5a5;
+}
+
+.btn-ar-exit:hover {
+  background: rgba(239, 68, 68, 0.25);
+  border-color: #ef4444;
+  color: #fff;
+}
+
+/* Barra inferior de controles AR */
+.ar-bottom-hud {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  pointer-events: auto;
+  margin-bottom: 8px;
+}
+
+.btn-ar-control {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background: rgba(18, 12, 26, 0.88);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 183, 3, 0.35);
+  border-radius: 16px;
+  padding: 10px 14px;
+  min-width: 68px;
+  color: #ffffff;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+.btn-ar-control:hover {
+  background: rgba(255, 183, 3, 0.2);
+  border-color: #ffb703;
+  transform: translateY(-2px);
+}
+
+.btn-ar-control .ctrl-icon {
+  font-size: 18px;
+  color: #ffb703;
+}
+
+.btn-ar-control .ctrl-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #faf5ef;
+}
+
+.btn-ar-snap {
+  background: linear-gradient(135deg, #ff7800 0%, #e65100 100%);
+  border-color: rgba(255, 255, 255, 0.3);
+  box-shadow: 0 8px 24px rgba(255, 120, 0, 0.45);
+}
+
+.btn-ar-snap .ctrl-icon {
+  color: #ffffff;
+  font-size: 20px;
+}
+
+.btn-ar-snap:hover {
+  background: linear-gradient(135deg, #ff9e00 0%, #ff5722 100%);
+  box-shadow: 0 10px 28px rgba(255, 120, 0, 0.65);
+}
+
+

@@ -1,5 +1,8 @@
+import QRCode from 'qrcode';
 import { OfrendaEditor } from '../editor/OfrendaEditor';
 import { OFRENDA_CATALOG } from '../ofrenda/Catalog';
+import { ARManager } from '../ar/ARManager';
+import { OfrendaSerializer } from '../ofrenda/OfrendaSerializer';
 import type { OfrendaTheme, PlacedItemData } from '../types/ofrenda';
 
 /**
@@ -8,11 +11,13 @@ import type { OfrendaTheme, PlacedItemData } from '../types/ofrenda';
  */
 export class UIManager {
   private editor: OfrendaEditor;
+  public readonly arManager: ARManager;
   private container: HTMLElement;
   private selectedCatalogId: string = 'veladora_vaso';
 
   constructor(editor: OfrendaEditor, containerSelector: string = '#ui-overlay') {
     this.editor = editor;
+    this.arManager = new ARManager(editor);
     const el = document.querySelector<HTMLElement>(containerSelector);
     if (!el) {
       throw new Error(`[UIManager] No se encontró el contenedor "${containerSelector}"`);
@@ -312,15 +317,48 @@ export class UIManager {
         </div>
       </div>
 
-      <!-- 8. MODAL DE COMPARTIR -->
+      <!-- 8. MODAL DE COMPARTIR Y CÓDIGO QR / AR -->
       <div class="modal-backdrop" id="modal-share">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-share-dialog">
           <div class="modal-header">
             <div class="modal-icon-badge">✨</div>
-            <h2>Comparte tu Ofrenda</h2>
+            <h2>Compartir Ofrenda</h2>
           </div>
           <div class="modal-body">
-            <p class="modal-confirm-desc">Cualquier persona con este enlace podrá ver tu altar 3D con todas las fotos, veladoras, nombres y dedicatorias que decoraste:</p>
+            <!-- Opción de Compartir en Realidad Aumentada (AR) -->
+            <div class="ar-share-toggle-card">
+              <div class="ar-toggle-text">
+                <div class="ar-toggle-title">
+                  <span class="ar-cam-icon">📱</span>
+                  <strong>Activar Realidad Aumentada (AR)</strong>
+                </div>
+                <small class="ar-toggle-desc">Al escanear el QR con un celular, la ofrenda abrirá la cámara para proyectarse en la mesa o suelo real.</small>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="toggle-share-ar" checked />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+
+            <!-- Código QR Dinámico -->
+            <div class="qr-container-box">
+              <div class="qr-frame">
+                <canvas id="qr-code-canvas"></canvas>
+              </div>
+              <p class="qr-helper-text" id="qr-helper-text">
+                Escanea con la cámara de tu celular para abrir en AR
+              </p>
+            </div>
+
+            <!-- Selector de IP local (visible si se ejecuta en localhost) -->
+            <div class="local-ip-hint" id="local-ip-box" style="display: none;">
+              <label for="input-custom-host">Dirección Wi-Fi / Red Local (para celular):</label>
+              <div class="ip-input-row">
+                <input type="text" id="input-custom-host" placeholder="Ej: 172.16.4.57:5173" />
+                <button type="button" class="btn-refresh-qr" id="btn-apply-host" title="Actualizar QR con esta IP">Actualizar</button>
+              </div>
+            </div>
+
             <div class="share-url-box">
               <input type="text" id="input-share-url" readonly />
               <button class="btn-copy-link" id="btn-copy-share-url">Copiar</button>
@@ -329,10 +367,82 @@ export class UIManager {
               ✓ ¡Enlace copiado al portapapeles!
             </div>
           </div>
-          <div class="modal-actions-row">
-            <button class="btn-confirm-reset full-w" id="btn-share-close">Listo</button>
+          <div class="modal-actions-row split-actions">
+            <button class="btn-try-ar" id="btn-try-ar-now">
+              <span>📷 Probar AR en este equipo</span>
+            </button>
+            <button class="btn-confirm-reset" id="btn-share-close">Listo</button>
           </div>
         </div>
+      </div>
+
+      <!-- 8B. MODAL DE BIENVENIDA AR (Al abrir enlace con QR en celular) -->
+      <div class="modal-backdrop" id="modal-ar-welcome">
+        <div class="modal-dialog modal-ar-welcome-dialog">
+          <div class="modal-header">
+            <div class="modal-icon-badge">📷</div>
+            <h2>Ofrenda en Realidad Aumentada</h2>
+          </div>
+          <div class="modal-body">
+            <p class="modal-confirm-text">¡Bienvenido a este altar tradicional en AR!</p>
+            <p class="modal-confirm-desc">Permite el acceso a tu cámara para colocar esta ofrenda con sus flores, velas, fotos y dedicatorias directamente sobre tu mesa o habitación.</p>
+            <div class="ar-instructions-grid">
+              <div class="ar-inst-item">
+                <span class="ar-inst-icon">1️⃣</span>
+                <span>Toca <strong>Activar Cámara</strong> abajo.</span>
+              </div>
+              <div class="ar-inst-item">
+                <span class="ar-inst-icon">2️⃣</span>
+                <span>Acepta el permiso de cámara del navegador.</span>
+              </div>
+              <div class="ar-inst-item">
+                <span class="ar-inst-icon">3️⃣</span>
+                <span>Apunta a una mesa o piso y usa tus dedos para mover o rotar el altar.</span>
+              </div>
+            </div>
+          </div>
+          <div class="modal-actions-row">
+            <button class="btn-cancel" id="btn-ar-welcome-3d">Ver solo en 3D</button>
+            <button class="btn-confirm-reset" id="btn-ar-welcome-start">📷 Activar Cámara y Ver en AR</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 8C. INTERFAZ HUD EN VIVO DURANTE REALIDAD AUMENTADA -->
+      <div class="ar-hud-overlay" id="ar-hud-overlay">
+        <header class="ar-top-hud">
+          <div class="ar-live-badge">
+            <span class="ar-pulse-dot"></span>
+            <span>Cámara AR Activa</span>
+          </div>
+          <div class="ar-top-actions">
+            <button class="btn-ar-hud" id="btn-ar-share-mobile" title="Compartir ofrenda">
+              <span>🔗 Compartir</span>
+            </button>
+            <button class="btn-ar-hud btn-ar-exit" id="btn-ar-exit" title="Salir de AR">
+              <span>✕ Salir de AR</span>
+            </button>
+          </div>
+        </header>
+
+        <footer class="ar-bottom-hud">
+          <button class="btn-ar-control" id="btn-ar-recenter" title="Centrar altar frente a la cámara">
+            <span class="ctrl-icon">✥</span>
+            <span class="ctrl-label">Centrar</span>
+          </button>
+          <button class="btn-ar-control" id="btn-ar-scale-toggle" title="Alternar tamaño mesa / real">
+            <span class="ctrl-icon">⤢</span>
+            <span class="ctrl-label" id="lbl-ar-scale">Escala</span>
+          </button>
+          <button class="btn-ar-control" id="btn-ar-rotate" title="Girar 45°">
+            <span class="ctrl-icon">⟳</span>
+            <span class="ctrl-label">Girar</span>
+          </button>
+          <button class="btn-ar-control btn-ar-snap" id="btn-ar-capture" title="Tomar foto de tu ofrenda en el mundo real">
+            <span class="ctrl-icon">📸</span>
+            <span class="ctrl-label">Foto AR</span>
+          </button>
+        </footer>
       </div>
 
       <!-- 9. MODAL DE CATÁLOGO COMPLETO (Al pulsar "Más") -->
@@ -452,34 +562,8 @@ export class UIManager {
       }
     });
 
-    // 5. Botón Compartir
-    const btnShare = this.container.querySelector('#btn-share-ofrenda');
-    const modalShare = this.container.querySelector('#modal-share') as HTMLElement;
-    const inputShare = this.container.querySelector('#input-share-url') as HTMLInputElement;
-    const btnCopy = this.container.querySelector('#btn-copy-share-url');
-    const btnShareClose = this.container.querySelector('#btn-share-close');
-    const toast = this.container.querySelector('#share-toast') as HTMLElement;
-
-    btnShare?.addEventListener('click', () => {
-      const url = this.editor.getShareUrl();
-      if (inputShare) inputShare.value = url;
-      modalShare.classList.add('open');
-      if (toast) toast.style.display = 'none';
-    });
-
-    btnCopy?.addEventListener('click', () => {
-      if (inputShare) {
-        navigator.clipboard.writeText(inputShare.value);
-        if (toast) {
-          toast.style.display = 'block';
-          this.editor.bridge.playSuccessSound();
-        }
-      }
-    });
-
-    btnShareClose?.addEventListener('click', () => {
-      modalShare.classList.remove('open');
-    });
+    // 5. Compartir con Código QR y soporte de Realidad Aumentada (AR)
+    this.setupShareAndARListeners();
 
     // 6. Selección de Escenarios en panel izquierdo
     const scenCasa = this.container.querySelector('#scen-casa');
@@ -774,5 +858,177 @@ export class UIManager {
     }
 
     modal.classList.add('open');
+  }
+
+  private setupShareAndARListeners(): void {
+    const btnShare = this.container.querySelector('#btn-share-ofrenda');
+    const modalShare = this.container.querySelector('#modal-share') as HTMLElement;
+    const inputShare = this.container.querySelector('#input-share-url') as HTMLInputElement;
+    const btnCopy = this.container.querySelector('#btn-copy-share-url');
+    const btnShareClose = this.container.querySelector('#btn-share-close');
+    const toast = this.container.querySelector('#share-toast') as HTMLElement;
+    const toggleAr = this.container.querySelector('#toggle-share-ar') as HTMLInputElement;
+    const qrCanvas = this.container.querySelector('#qr-code-canvas') as HTMLCanvasElement;
+    const qrHelper = this.container.querySelector('#qr-helper-text');
+    const btnTryAr = this.container.querySelector('#btn-try-ar-now');
+    const localIpBox = this.container.querySelector('#local-ip-box') as HTMLElement;
+    const inputHost = this.container.querySelector('#input-custom-host') as HTMLInputElement;
+    const btnApplyHost = this.container.querySelector('#btn-apply-host');
+
+    // Detectar si está en localhost para sugerir la IP de red local
+    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    let currentCustomHost = isLocalhost ? '172.16.4.57:5173' : '';
+
+    if (localIpBox && isLocalhost) {
+      localIpBox.style.display = 'block';
+      if (inputHost) inputHost.value = currentCustomHost;
+    }
+
+    const refreshShareModal = async () => {
+      const isAr = toggleAr ? toggleAr.checked : true;
+      const url = this.editor.getShareUrl(isAr, currentCustomHost || undefined);
+
+      if (inputShare) inputShare.value = url;
+      if (qrHelper) {
+        qrHelper.textContent = isAr
+          ? 'Escanea con la cámara de tu celular para abrir en Realidad Aumentada'
+          : 'Escanea con tu celular para ver este altar 3D interactivo';
+      }
+
+      if (qrCanvas) {
+        try {
+          await QRCode.toCanvas(qrCanvas, url, {
+            width: 220,
+            margin: 2,
+            color: {
+              dark: '#140d1f',
+              light: '#ffffff',
+            },
+          });
+        } catch (err) {
+          console.error('[Ofrendas 3D] Error al generar código QR:', err);
+        }
+      }
+    };
+
+    btnShare?.addEventListener('click', async () => {
+      modalShare.classList.add('open');
+      if (toast) toast.style.display = 'none';
+      this.editor.bridge.playClickSound();
+      await refreshShareModal();
+    });
+
+    toggleAr?.addEventListener('change', async () => {
+      await refreshShareModal();
+      this.editor.bridge.playClickSound();
+    });
+
+    btnApplyHost?.addEventListener('click', async () => {
+      if (inputHost) currentCustomHost = inputHost.value.trim();
+      await refreshShareModal();
+      this.editor.bridge.playSuccessSound();
+    });
+
+    btnCopy?.addEventListener('click', () => {
+      if (inputShare) {
+        navigator.clipboard.writeText(inputShare.value);
+        if (toast) {
+          toast.style.display = 'block';
+          this.editor.bridge.playSuccessSound();
+        }
+      }
+    });
+
+    btnShareClose?.addEventListener('click', () => {
+      modalShare.classList.remove('open');
+    });
+
+    // Botón de probar AR en el equipo actual
+    btnTryAr?.addEventListener('click', async () => {
+      modalShare.classList.remove('open');
+      await this.arManager.startCameraAR();
+    });
+
+    // 2. Modal de Bienvenida AR (cuando se escanea el QR en el móvil)
+    const modalArWelcome = this.container.querySelector('#modal-ar-welcome') as HTMLElement;
+    const btnArStart = this.container.querySelector('#btn-ar-welcome-start');
+    const btnAr3D = this.container.querySelector('#btn-ar-welcome-3d');
+
+    btnArStart?.addEventListener('click', async () => {
+      modalArWelcome.classList.remove('open');
+      await this.arManager.startCameraAR();
+    });
+
+    btnAr3D?.addEventListener('click', () => {
+      modalArWelcome.classList.remove('open');
+    });
+
+    // Si la URL solicita AR (al escanear el QR), abrir la bienvenida AR automáticamente
+    if (OfrendaSerializer.isArRequested()) {
+      modalArWelcome?.classList.add('open');
+    }
+
+    // 3. Controles HUD de Realidad Aumentada
+    const hudOverlay = this.container.querySelector('#ar-hud-overlay') as HTMLElement;
+    const btnArExit = this.container.querySelector('#btn-ar-exit');
+    const btnArRecenter = this.container.querySelector('#btn-ar-recenter');
+    const btnArScale = this.container.querySelector('#btn-ar-scale-toggle');
+    const lblArScale = this.container.querySelector('#lbl-ar-scale');
+    const btnArRotate = this.container.querySelector('#btn-ar-rotate');
+    const btnArCapture = this.container.querySelector('#btn-ar-capture');
+    const btnArShareMobile = this.container.querySelector('#btn-ar-share-mobile');
+
+    const scalePresets = [0.45, 0.8, 1.2];
+    const scaleLabels = ['Mesa (0.4x)', 'Medio (0.8x)', 'Real (1.2x)'];
+    let currentScaleIdx = 0;
+
+    btnArExit?.addEventListener('click', () => {
+      this.arManager.stopCameraAR();
+    });
+
+    btnArRecenter?.addEventListener('click', () => {
+      this.arManager.recenterAltar();
+    });
+
+    btnArScale?.addEventListener('click', () => {
+      currentScaleIdx = (currentScaleIdx + 1) % scalePresets.length;
+      this.arManager.setAltarScale(scalePresets[currentScaleIdx]);
+      if (lblArScale) lblArScale.textContent = scaleLabels[currentScaleIdx];
+      this.editor.bridge.playClickSound();
+    });
+
+    btnArRotate?.addEventListener('click', () => {
+      this.arManager.rotateAltar(45);
+    });
+
+    btnArCapture?.addEventListener('click', async () => {
+      const snapBtn = btnArCapture as HTMLElement;
+      snapBtn.style.transform = 'scale(0.85)';
+      setTimeout(() => { snapBtn.style.transform = ''; }, 150);
+      await this.arManager.captureARPhoto();
+    });
+
+    btnArShareMobile?.addEventListener('click', async () => {
+      const url = this.editor.getShareUrl(true);
+      if (navigator.share) {
+        try {
+          await navigator.share({
+            title: this.editor.getData().title,
+            text: `¡Mira mi ofrenda de Día de Muertos en Realidad Aumentada!`,
+            url,
+          });
+        } catch {}
+      } else {
+        await navigator.clipboard.writeText(url);
+        alert('✓ Enlace AR copiado al portapapeles');
+      }
+    });
+
+    // Escuchar cambios de estado en ARManager
+    this.arManager.addListener((state) => {
+      if (hudOverlay) {
+        hudOverlay.classList.toggle('active', state.isActive);
+      }
+    });
   }
 }

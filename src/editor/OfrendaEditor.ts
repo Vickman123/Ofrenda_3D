@@ -514,10 +514,10 @@ export class OfrendaEditor {
   }
 
   /**
-   * Genera el enlace público de compartición.
+   * Genera el enlace público de compartición con soporte de AR y origen personalizado.
    */
-  public getShareUrl(): string {
-    return OfrendaSerializer.generateShareUrl(this.data);
+  public getShareUrl(arMode: boolean = false, customOrigin?: string): string {
+    return OfrendaSerializer.generateShareUrl(this.data, arMode, customOrigin);
   }
 
   /**

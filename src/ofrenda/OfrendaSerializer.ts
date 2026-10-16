@@ -179,9 +179,14 @@ export class OfrendaSerializer {
   }
 
   /**
-   * Exporta la ofrenda como una URL compartible con payload en Base64.
+   * Exporta la ofrenda como una URL compartible con payload en Base64,
+   * con soporte opcional para modo Realidad Aumentada (AR) y origen personalizado.
    */
-  public static generateShareUrl(data: OfrendaData): string {
+  public static generateShareUrl(
+    data: OfrendaData,
+    arMode: boolean = false,
+    customOrigin?: string
+  ): string {
     const compactPayload = {
       t: data.title,
       d: data.dedication,
@@ -200,9 +205,40 @@ export class OfrendaSerializer {
     const json = JSON.stringify(compactPayload);
     // Codificación segura para URL
     const b64 = btoa(unescape(encodeURIComponent(json)));
-    const url = new URL(window.location.href);
+
+    let baseUrl = window.location.href.split('#')[0].split('?')[0];
+    if (customOrigin && customOrigin.trim()) {
+      let trimmed = customOrigin.trim();
+      if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
+        trimmed = `http://${trimmed}`;
+      }
+      try {
+        const parsedCustom = new URL(trimmed);
+        const currentUrl = new URL(baseUrl);
+        currentUrl.protocol = parsedCustom.protocol;
+        currentUrl.host = parsedCustom.host;
+        baseUrl = currentUrl.toString();
+      } catch {}
+    }
+
+    const url = new URL(baseUrl);
+    if (arMode) {
+      url.searchParams.set('ar', '1');
+    }
     url.hash = `share=${b64}`;
     return url.toString();
+  }
+
+  /**
+   * Verifica si la URL actual solicita modo Realidad Aumentada (AR).
+   */
+  public static isArRequested(): boolean {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('ar') === '1' || params.get('ar') === 'true') {
+      return true;
+    }
+    const hash = window.location.hash;
+    return hash.includes('ar=1') || hash.includes('ar=true');
   }
 
   /**
@@ -211,13 +247,17 @@ export class OfrendaSerializer {
   public static parseFromUrl(): OfrendaData | null {
     try {
       const hash = window.location.hash;
-      if (!hash.startsWith('#share=')) return null;
+      if (!hash.includes('share=')) return null;
 
-      const b64 = hash.replace('#share=', '');
+      // Extraer share= de hash incluso si hay otros parámetros
+      const match = hash.match(/share=([^&]+)/);
+      if (!match) return null;
+
+      const b64 = match[1];
       const json = decodeURIComponent(escape(atob(b64)));
       const raw = JSON.parse(json);
 
-      const items: PlacedItemData[] = raw.it.map((item: any) => ({
+      const items: PlacedItemData[] = (raw.it || []).map((item: any) => ({
         instanceId: item.id,
         templateId: item.tid,
         position: item.p,
@@ -232,7 +272,7 @@ export class OfrendaSerializer {
         id: `shared-${Date.now()}`,
         title: raw.t || 'Ofrenda Compartida',
         dedication: raw.d || '',
-        theme: raw.th || 'noche_velas',
+        theme: raw.th || 'casa_mexicana',
         items,
         createdAt: Date.now(),
         updatedAt: Date.now(),
