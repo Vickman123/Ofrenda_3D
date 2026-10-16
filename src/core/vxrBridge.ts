@@ -19,18 +19,19 @@ export class VXRBridge {
       enableGrid: false,       // Ocultamos grid técnico para dar protagonismo a la ofrenda
       autoOrbitControls: true, // Controles de ratón y táctiles con amortiguamiento
       pixelRatioCap: 1.5,      // Límite óptimo para Meta Quest y móviles
-      cameraPosition: [0, 1.8, 3.4],
-      fov: 52,
+      cameraPosition: [0, 1.15, 3.9],
+      fov: 48,
     });
 
     // 2. Apagar grid explícitamente a través del método nativo de XRScene
     this.app.scene.setGridVisible(false);
 
-    // 3. Ajustar el objetivo de OrbitControls al centro de la ofrenda
+    // 3. Ajustar el encuadre y objetivo de OrbitControls al centro de la ofrenda
     if (this.app.controls) {
-      this.app.controls.target.set(0, 0.7, 0);
-      this.app.controls.minDistance = 1.0;
-      this.app.controls.maxDistance = 6.0;
+      this.app.renderer.camera.position.set(0, 1.15, 3.9);
+      this.app.controls.target.set(0, 0.88, -0.1);
+      this.app.controls.minDistance = 1.2;
+      this.app.controls.maxDistance = 6.5;
       this.app.controls.maxPolarAngle = Math.PI / 2 + 0.05; // No pasar por debajo del suelo
       this.app.controls.update();
     }
@@ -118,7 +119,7 @@ export class VXRBridge {
    * Restablece la cámara orbital al encuadre ideal de la ofrenda.
    */
   public resetCamera(): void {
-    this.app.resetCamera([0, 1.8, 3.4], [0, 0.7, 0]);
+    this.app.resetCamera([0, 1.15, 3.9], [0, 0.88, -0.1]);
   }
 
   /**
