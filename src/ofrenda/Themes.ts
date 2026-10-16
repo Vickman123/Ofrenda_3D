@@ -1,0 +1,43 @@
+import type { OfrendaTheme, ThemeConfig } from '../types/ofrenda';
+
+export const OFRENDA_THEMES: Record<OfrendaTheme, ThemeConfig> = {
+  noche_velas: {
+    id: 'noche_velas',
+    name: 'Noche de Velas',
+    description: 'Ambiente íntimo a la luz de las veladoras bajo un cielo nocturno estrellado.',
+    backgroundColor: 0x090514,
+    fogColor: 0x090514,
+    ambientLightColor: 0xffe4cc,
+    ambientLightIntensity: 0.5,
+    keyLightColor: 0xffb703,
+    keyLightIntensity: 1.1,
+    accentLightColor: 0xa855f7,
+    accentLightIntensity: 0.4,
+  },
+  tarde_dorada: {
+    id: 'tarde_dorada',
+    name: 'Atardecer Dorado',
+    description: 'Luz dorada de otoño con tonos cálidos de sol poniente sobre las flores.',
+    backgroundColor: 0x1f0d2b,
+    fogColor: 0x1f0d2b,
+    ambientLightColor: 0xffedd5,
+    ambientLightIntensity: 0.75,
+    keyLightColor: 0xfbbf24,
+    keyLightIntensity: 1.5,
+    accentLightColor: 0xf43f5e,
+    accentLightIntensity: 0.5,
+  },
+  altar_mistico: {
+    id: 'altar_mistico',
+    name: 'Altar Místico',
+    description: 'Resplandor mágico con niebla morada y acentos de rosa mexicano.',
+    backgroundColor: 0x0f051d,
+    fogColor: 0x0f051d,
+    ambientLightColor: 0xc084fc,
+    ambientLightIntensity: 0.6,
+    keyLightColor: 0xf59e0b,
+    keyLightIntensity: 1.2,
+    accentLightColor: 0xe11d48,
+    accentLightIntensity: 0.7,
+  },
+};

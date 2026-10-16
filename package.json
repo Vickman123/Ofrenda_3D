@@ -1,0 +1,21 @@
+{
+  "name": "ofrendas-3d",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Ofrendas 3D — Creador interactivo y festivo de ofrendas mexicanas en 3D y WebXR",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "three": "^0.174.0",
+    "vxr": "file:./libs/vxr"
+  },
+  "devDependencies": {
+    "@types/three": "^0.174.0",
+    "typescript": "^5.8.2",
+    "vite": "^6.2.0"
+  }
+}

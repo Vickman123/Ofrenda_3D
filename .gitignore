@@ -1,0 +1,12 @@
+# Dependencias y compilación
+node_modules
+dist
+.DS_Store
+
+# Logs
+*.log
+npm-debug.log*
+
+# Entorno local
+.env.local
+.env.*.local
