@@ -815,19 +815,18 @@ export class UIManager {
 
     dropZone?.addEventListener('click', () => inputFile?.click());
 
-    inputFile?.addEventListener('change', () => {
+    inputFile?.addEventListener('change', async () => {
       if (inputFile.files && inputFile.files[0]) {
         const file = inputFile.files[0];
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          currentPhotoUrl = e.target?.result as string;
+        const compressed = await this.compressPortraitToMicroWebp(file);
+        if (compressed) {
+          currentPhotoUrl = compressed;
           if (previewImg) {
             previewImg.src = currentPhotoUrl;
             previewImg.classList.remove('photo-preview-hidden');
           }
           if (placeholder) placeholder.style.display = 'none';
-        };
-        reader.readAsDataURL(file);
+        }
       }
     });
 
@@ -865,6 +864,51 @@ export class UIManager {
     }
 
     modal.classList.add('open');
+  }
+
+  /**
+   * Comprime la imagen del retrato a formato micro-WebP (~1.2 KB)
+   * con recorte armónico 3:4 para que quepa directamente dentro del código QR y la URL sin backend.
+   */
+  private compressPortraitToMicroWebp(file: File, width = 120, height = 160, quality = 0.72): Promise<string> {
+    return new Promise((resolve) => {
+      const img = new Image();
+      const objectUrl = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(objectUrl);
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve('');
+          return;
+        }
+
+        // Recorte centrado en proporción retrato 3:4
+        const targetRatio = width / height;
+        const currentRatio = img.width / img.height;
+        let sx = 0, sy = 0, sWidth = img.width, sHeight = img.height;
+
+        if (currentRatio > targetRatio) {
+          sWidth = img.height * targetRatio;
+          sx = (img.width - sWidth) / 2;
+        } else {
+          sHeight = img.width / targetRatio;
+          sy = (img.height - sHeight) / 2;
+        }
+
+        ctx.drawImage(img, sx, sy, sWidth, sHeight, 0, 0, width, height);
+
+        let dataUrl = canvas.toDataURL('image/webp', quality);
+        if (!dataUrl.startsWith('data:image/webp')) {
+          dataUrl = canvas.toDataURL('image/jpeg', quality);
+        }
+        resolve(dataUrl);
+      };
+      img.onerror = () => resolve('');
+      img.src = objectUrl;
+    });
   }
 
   private setupShareAndARListeners(): void {
