@@ -877,7 +877,8 @@ export class UIManager {
 
     // Detectar si está en localhost para sugerir la IP de red local
     const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    let currentCustomHost = isLocalhost ? '172.16.4.57:5173' : '';
+    const savedHost = localStorage.getItem('ofrendas3d_custom_host');
+    let currentCustomHost = savedHost || (isLocalhost ? '172.30.0.26:5173' : window.location.host);
 
     if (localIpBox && isLocalhost) {
       localIpBox.style.display = 'block';
@@ -924,7 +925,10 @@ export class UIManager {
     });
 
     btnApplyHost?.addEventListener('click', async () => {
-      if (inputHost) currentCustomHost = inputHost.value.trim();
+      if (inputHost) {
+        currentCustomHost = inputHost.value.trim();
+        localStorage.setItem('ofrendas3d_custom_host', currentCustomHost);
+      }
       await refreshShareModal();
       this.editor.bridge.playSuccessSound();
     });
