@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Ofrendas 3D — Altar Tradicional Mexicano en 3D & WebXR</title>
+  <meta name="description" content="Crea, decora y comparte ofrendas mexicanas tradicionales en 3D con cempasúchil, veladoras y dedicatorias." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🕯️</text></svg>" />
+  <script>
+    // En despliegues estáticos de GitHub Pages (donde no corre el servidor Vite),
+    // si el navegador intenta cargar directamente el archivo TypeScript sin compilar,
+    // redirigir a la versión compilada en ./docs/ para evitar pantalla en negro.
+    if (window.location.hostname.endsWith('github.io') && !window.location.pathname.includes('/docs/')) {
+      window.addEventListener('DOMContentLoaded', function() {
+        var hasRawTs = document.querySelector('script[src*="src/main.ts"]');
+        var hasBundle = document.querySelector('script[src*="assets/"]');
+        if (hasRawTs && !hasBundle) {
+          var base = window.location.pathname.endsWith('/') ? window.location.pathname : window.location.pathname + '/';
+          window.location.replace(base + 'docs/' + window.location.search + window.location.hash);
+        }
+      });
+    }
+  </script>
+  <script type="module" crossorigin src="./assets/index-COzBJp4F.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-DUYSktt_.css">
+</head>
+<body>
+  <div id="app-container">
+    <!-- Viewport 3D gestionado por VXR Core -->
+    <div id="app-viewport"></div>
+
+    <!-- Capa de interfaz de usuario desacoplada -->
+    <div id="ui-overlay"></div>
+  </div>
+
+</body>
+</html>
