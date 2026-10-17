@@ -95,6 +95,16 @@ export class UIManager {
             </svg>
           </button>
 
+          <!-- Botón Pantalla Completa (Inmersión en móvil y escritorio) -->
+          <button class="btn-icon-round" id="btn-fullscreen-toggle" title="Pantalla Completa (Inmersión total)">
+            <svg id="fullscreen-icon-enter" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+            </svg>
+            <svg id="fullscreen-icon-exit" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" style="display:none;">
+              <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/>
+            </svg>
+          </button>
+
           <!-- Botón Compartir -->
           <button class="btn-share-pill" id="btn-share-ofrenda">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -153,8 +163,8 @@ export class UIManager {
           <span class="tool-label">Agregar</span>
         </button>
 
-        <!-- Mover -->
-        <button class="tool-btn" id="tool-btn-move" title="Mover objeto de nivel">
+        <!-- Mover (Nivel) -->
+        <button class="tool-btn" id="tool-btn-move" title="Mover objeto de nivel (repisa superior/inferior)">
           <div class="tool-circle">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="5 9 2 12 5 15"/>
@@ -165,7 +175,27 @@ export class UIManager {
               <line x1="12" y1="2" x2="12" y2="22"/>
             </svg>
           </div>
-          <span class="tool-label">Mover</span>
+          <span class="tool-label">Nivel</span>
+        </button>
+
+        <!-- Izquierda (Mover hacia el lado izquierdo de la repisa) -->
+        <button class="tool-btn" id="tool-btn-left" title="Mover objeto a la izquierda en la repisa">
+          <div class="tool-circle">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5">
+              <polyline points="15 18 9 12 15 6"/>
+            </svg>
+          </div>
+          <span class="tool-label">◀ Izq</span>
+        </button>
+
+        <!-- Derecha (Mover hacia el lado derecho de la repisa) -->
+        <button class="tool-btn" id="tool-btn-right" title="Mover objeto a la derecha en la repisa">
+          <div class="tool-circle">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5">
+              <polyline points="9 18 15 12 9 6"/>
+            </svg>
+          </div>
+          <span class="tool-label">Der ▶</span>
         </button>
 
         <!-- Rotar -->
@@ -569,6 +599,51 @@ export class UIManager {
       }
     });
 
+    // 4.1 Botón Pantalla Completa (Inmersión en móvil y escritorio)
+    const btnFullscreen = this.container.querySelector('#btn-fullscreen-toggle');
+    const fsEnterIcon = this.container.querySelector('#fullscreen-icon-enter') as HTMLElement | null;
+    const fsExitIcon = this.container.querySelector('#fullscreen-icon-exit') as HTMLElement | null;
+
+    const updateFullscreenIcons = () => {
+      const isFs = !!(
+        document.fullscreenElement ||
+        (document as any).webkitFullscreenElement ||
+        (document as any).mozFullScreenElement
+      );
+      if (fsEnterIcon && fsExitIcon) {
+        fsEnterIcon.style.display = isFs ? 'none' : 'block';
+        fsExitIcon.style.display = isFs ? 'block' : 'none';
+      }
+    };
+
+    btnFullscreen?.addEventListener('click', () => {
+      this.editor.bridge.playClickSound();
+      const doc = document as any;
+      const el = document.documentElement as any;
+      const isFs = doc.fullscreenElement || doc.webkitFullscreenElement || doc.mozFullScreenElement;
+
+      if (!isFs) {
+        if (el.requestFullscreen) {
+          el.requestFullscreen().catch(() => {});
+        } else if (el.webkitRequestFullscreen) {
+          el.webkitRequestFullscreen();
+        } else if (el.mozRequestFullScreen) {
+          el.mozRequestFullScreen();
+        }
+      } else {
+        if (doc.exitFullscreen) {
+          doc.exitFullscreen().catch(() => {});
+        } else if (doc.webkitExitFullscreen) {
+          doc.webkitExitFullscreen();
+        } else if (doc.mozCancelFullScreen) {
+          doc.mozCancelFullScreen();
+        }
+      }
+    });
+
+    document.addEventListener('fullscreenchange', updateFullscreenIcons);
+    document.addEventListener('webkitfullscreenchange', updateFullscreenIcons);
+
     // 5. Compartir con Código QR y soporte de Realidad Aumentada (AR)
     this.setupShareAndARListeners();
 
@@ -587,6 +662,8 @@ export class UIManager {
     // 7. Barra derecha de Edición
     const btnAdd = this.container.querySelector('#tool-btn-add');
     const btnMove = this.container.querySelector('#tool-btn-move');
+    const btnLeft = this.container.querySelector('#tool-btn-left');
+    const btnRight = this.container.querySelector('#tool-btn-right');
     const btnRotate = this.container.querySelector('#tool-btn-rotate');
     const btnScale = this.container.querySelector('#tool-btn-scale');
     const btnDelete = this.container.querySelector('#tool-btn-delete');
@@ -598,6 +675,14 @@ export class UIManager {
 
     btnMove?.addEventListener('click', () => {
       this.editor.moveSelectedItemLevel();
+    });
+
+    btnLeft?.addEventListener('click', () => {
+      this.editor.moveSelectedItemX(-0.1);
+    });
+
+    btnRight?.addEventListener('click', () => {
+      this.editor.moveSelectedItemX(0.1);
     });
 
     btnRotate?.addEventListener('click', () => {

@@ -283,6 +283,32 @@ export class OfrendaEditor {
 
       this.selectItem(foundInstanceId);
     });
+
+    // Atajos de teclado para manipulación precisa
+    window.addEventListener('keydown', (e) => {
+      const activeEl = document.activeElement as HTMLElement | null;
+      if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.isContentEditable)) {
+        return;
+      }
+
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        this.moveSelectedItemX(-0.08);
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        this.moveSelectedItemX(0.08);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        this.moveSelectedItemLevel();
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        this.moveSelectedItemLevel();
+      } else if (e.key === 'r' || e.key === 'R') {
+        this.rotateSelectedItem(45);
+      } else if (e.key === 'Delete' || e.key === 'Backspace') {
+        this.deleteSelectedItem();
+      }
+    });
   }
 
   /**
@@ -416,6 +442,33 @@ export class OfrendaEditor {
     this.recordState();
     const nextLevel = targetLevel !== undefined ? targetLevel : (item.level + 1) % 4;
     this.placement.moveItemToLevel(item, nextLevel);
+    mesh.position.set(item.position[0], item.position[1], item.position[2]);
+
+    if (this.selectionHalo) {
+      this.selectionHalo.position.set(mesh.position.x, mesh.position.y + 0.005, mesh.position.z);
+    }
+
+    this.bridge.playClickSound();
+    this.save();
+    this.notify('selectionChanged', item);
+  }
+
+  /**
+   * Mueve horizontalmente el objeto seleccionado en su repisa actual (- deltaX = izquierda, + deltaX = derecha).
+   */
+  public moveSelectedItemX(deltaX: number = 0.1): void {
+    if (!this.selectedId) {
+      if (this.data.items.length > 0) {
+        this.selectItem(this.data.items[0].instanceId);
+      }
+      return;
+    }
+    const item = this.data.items.find((i) => i.instanceId === this.selectedId);
+    const mesh = this.itemMeshes.get(this.selectedId);
+    if (!item || !mesh) return;
+
+    this.recordState();
+    this.placement.shiftItemX(item, deltaX);
     mesh.position.set(item.position[0], item.position[1], item.position[2]);
 
     if (this.selectionHalo) {

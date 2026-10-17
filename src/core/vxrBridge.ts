@@ -9,6 +9,7 @@ import type { ThemeConfig } from '../types/ofrenda';
 export class VXRBridge {
   public readonly app: XRApp;
   private currentTheme?: ThemeConfig;
+  private backgroundTexture?: THREE.Texture;
 
   constructor(containerSelector: string = '#app-viewport') {
     // 1. Inicializar XRApp con sombras de alta calidad y punto de vista a la ofrenda
@@ -36,6 +37,32 @@ export class VXRBridge {
       this.app.controls.enablePan = false; // Desactivar paneo lateral para evitar que el altar se desfase
       this.app.controls.update();
     }
+
+    // 4. Cargar fondo colonial místico para la ofrenda
+    this.loadBackgroundTexture();
+  }
+
+  /**
+   * Carga la textura de fondo panorámica para el patio colonial de Día de Muertos.
+   */
+  private loadBackgroundTexture(): void {
+    const loader = new THREE.TextureLoader();
+    const baseUrl = (import.meta as any).env?.BASE_URL || './';
+    const bgUrl = `${baseUrl.endsWith('/') ? baseUrl : baseUrl + '/'}background-ofrenda.jpg`;
+    loader.load(
+      bgUrl,
+      (texture) => {
+        texture.colorSpace = THREE.SRGBColorSpace;
+        this.backgroundTexture = texture;
+        if (!this.currentTheme || this.currentTheme.id === 'casa_mexicana') {
+          this.app.scene.setBackground(texture);
+        }
+      },
+      undefined,
+      (err) => {
+        console.warn('Fondo de ofrenda no disponible, manteniendo color base:', err);
+      }
+    );
   }
 
   /**
@@ -44,8 +71,12 @@ export class VXRBridge {
   public applyTheme(theme: ThemeConfig): void {
     this.currentTheme = theme;
 
-    // 1. Color de fondo y niebla de la escena nativa
-    this.app.scene.setBackground(theme.backgroundColor);
+    // 1. Color o textura de fondo y niebla de la escena nativa
+    if (theme.id === 'casa_mexicana' && this.backgroundTexture) {
+      this.app.scene.setBackground(this.backgroundTexture);
+    } else {
+      this.app.scene.setBackground(theme.backgroundColor);
+    }
     this.app.scene.setFog(theme.fogColor, 4, 18);
 
     // 2. Luces nativas configuradas por XRScene

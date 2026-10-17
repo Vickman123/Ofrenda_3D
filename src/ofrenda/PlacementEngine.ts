@@ -76,4 +76,15 @@ export class PlacementEngine {
     const halfW = (levelInfo.width * 0.8) / 2;
     item.position[0] = Math.max(-halfW, Math.min(halfW, item.position[0]));
   }
+
+  /**
+   * Desplaza horizontalmente el elemento a lo largo del escalón (izquierda / derecha).
+   * @param deltaX Distancia en metros (-0.1 para izquierda, +0.1 para derecha).
+   */
+  public shiftItemX(item: PlacedItemData, deltaX: number): void {
+    const levelInfo = this.altar.levels[item.level];
+    const usableHalfWidth = (levelInfo.width * 0.84) / 2;
+    const newX = Math.max(-usableHalfWidth, Math.min(usableHalfWidth, item.position[0] + deltaX));
+    item.position[0] = Number(newX.toFixed(3));
+  }
 }
