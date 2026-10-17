@@ -2,6 +2,8 @@
 
 > Aplicación web creativa e interactiva en 3D y WebXR para crear, decorar y compartir ofrendas mexicanas tradicionales del Día de Muertos.
 
+https://vickman123.github.io/Ofrenda_3D/
+
 Desarrollada sobre la arquitectura de **VXR Core** (Framework-XVR) por Vickman123.
 
 ---
