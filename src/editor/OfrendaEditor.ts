@@ -93,6 +93,13 @@ export class OfrendaEditor {
 
     // 8. Iniciar el renderizado
     this.bridge.start();
+
+    // 9. Forzar encuadre centrado de la ofrenda al inicio
+    this.bridge.resetCamera();
+    requestAnimationFrame(() => {
+      this.bridge.resetCamera();
+    });
+
     this.notify('ofrendaUpdated', this.data);
     this.notify('historyChanged');
   }

@@ -54,6 +54,13 @@ html, body {
   z-index: 1;
 }
 
+#app-viewport canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  outline: none;
+}
+
 #ui-overlay {
   position: absolute;
   inset: 0;

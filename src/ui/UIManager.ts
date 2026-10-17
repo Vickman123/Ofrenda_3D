@@ -550,6 +550,13 @@ export class UIManager {
       this.editor.toggleTheme();
     });
 
+    // 3.1 Clic en logo de Ofrendas 3D para centrar la cámara
+    const brandGroup = this.container.querySelector('.brand-group');
+    brandGroup?.addEventListener('click', () => {
+      this.editor.bridge.resetCamera();
+      this.editor.bridge.playClickSound();
+    });
+
     // 4. Botón WebXR
     const btnVr = this.container.querySelector('#btn-vr-toggle');
     btnVr?.addEventListener('click', () => {

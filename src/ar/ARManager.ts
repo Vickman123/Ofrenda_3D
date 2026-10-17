@@ -165,9 +165,9 @@ export class ARManager {
 
     // 4. Restaurar posición y escala del altar
     const altarGroup = this.editor.altar.group;
-    altarGroup.position.copy(this.savedAltarPos);
-    altarGroup.scale.copy(this.savedAltarScale);
-    altarGroup.rotation.copy(this.savedAltarRot);
+    altarGroup.position.set(0, 0, 0);
+    altarGroup.scale.set(1, 1, 1);
+    altarGroup.rotation.set(0, 0, 0);
 
     this.editor.bridge.resetCamera();
 

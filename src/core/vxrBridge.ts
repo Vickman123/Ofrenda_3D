@@ -33,6 +33,7 @@ export class VXRBridge {
       this.app.controls.minDistance = 1.2;
       this.app.controls.maxDistance = 6.5;
       this.app.controls.maxPolarAngle = Math.PI / 2 + 0.05; // No pasar por debajo del suelo
+      this.app.controls.enablePan = false; // Desactivar paneo lateral para evitar que el altar se desfase
       this.app.controls.update();
     }
   }
@@ -116,10 +117,17 @@ export class VXRBridge {
   }
 
   /**
-   * Restablece la cámara orbital al encuadre ideal de la ofrenda.
+   * Restablece la cámara orbital al encuadre ideal y perfectamente centrado de la ofrenda.
    */
   public resetCamera(): void {
+    if (this.app.controls) {
+      this.app.controls.enablePan = false;
+      this.app.controls.target.set(0, 0.88, -0.1);
+    }
     this.app.resetCamera([0, 1.15, 3.9], [0, 0.88, -0.1]);
+    if (this.app.controls) {
+      this.app.controls.update();
+    }
   }
 
   /**
