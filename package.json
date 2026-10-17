@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host",
-    "build": "tsc && vite build",
+    "build": "tsc && vite build && npm run copy:docs",
+    "copy:docs": "node -e \"const fs=require('fs'); fs.rmSync('./docs', {recursive:true, force:true}); fs.cpSync('./dist', './docs', {recursive:true});\"",
     "preview": "vite preview"
   },
   "dependencies": {
