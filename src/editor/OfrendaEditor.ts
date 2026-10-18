@@ -12,7 +12,8 @@ export type EditorEvent =
   | 'selectionChanged' 
   | 'ofrendaUpdated' 
   | 'themeChanged' 
-  | 'historyChanged';
+  | 'historyChanged'
+  | 'editingModeChanged';
 
 export type EditorListener = (event: EditorEvent, payload?: any) => void;
 
@@ -32,6 +33,9 @@ export class OfrendaEditor {
   private selectedId: string | null = null;
   private selectionHalo: THREE.Mesh | null = null;
   private listeners: Set<EditorListener> = new Set();
+
+  /** Respaldo del item en edición activa para permitir Cancelar o Confirmar */
+  private editingBackup: { instanceId: string; isNew: boolean; data: string } | null = null;
 
   /** Snapshot inmutable del estado inicial de la ofrenda */
   private initialSnapshot: string = '';
@@ -281,7 +285,9 @@ export class OfrendaEditor {
         if (foundInstanceId) break;
       }
 
-      this.selectItem(foundInstanceId);
+      if (foundInstanceId) {
+        this.startEditing(foundInstanceId, false);
+      }
     });
 
     // Atajos de teclado para manipulación precisa
@@ -307,8 +313,93 @@ export class OfrendaEditor {
         this.rotateSelectedItem(45);
       } else if (e.key === 'Delete' || e.key === 'Backspace') {
         this.deleteSelectedItem();
+      } else if (e.key === 'Escape') {
+        this.cancelEditing();
+      } else if (e.key === 'Enter') {
+        this.confirmEditing();
       }
     });
+  }
+
+  /**
+   * Inicia el modo de edición y colocación amigable de un elemento.
+   */
+  public startEditing(instanceId: string, isNew: boolean = false): void {
+    if (this.editingBackup && this.editingBackup.instanceId !== instanceId) {
+      this.confirmEditing();
+    }
+    this.selectItem(instanceId);
+    const item = this.getSelectedItem();
+    if (item) {
+      this.editingBackup = {
+        instanceId,
+        isNew,
+        data: JSON.stringify(item),
+      };
+      this.notify('editingModeChanged', { isEditing: true, item, isNew });
+    }
+  }
+
+  /**
+   * Confirma la posición y transformaciones del elemento en edición.
+   */
+  public confirmEditing(): void {
+    if (!this.editingBackup) {
+      this.selectItem(null);
+      return;
+    }
+    this.editingBackup = null;
+    this.save();
+    this.bridge.playSuccessSound();
+    this.selectItem(null);
+    this.notify('editingModeChanged', { isEditing: false, item: null, isNew: false });
+    this.notify('ofrendaUpdated', this.data);
+  }
+
+  /**
+   * Cancela la edición y revierte al estado previo (o elimina el item si era recién agregado).
+   */
+  public cancelEditing(): void {
+    if (!this.editingBackup) {
+      this.selectItem(null);
+      return;
+    }
+    const { instanceId, isNew, data } = this.editingBackup;
+    this.editingBackup = null;
+
+    if (isNew) {
+      this.deleteSelectedItem();
+    } else {
+      const prev = JSON.parse(data) as PlacedItemData;
+      const cur = this.data.items.find((i) => i.instanceId === instanceId);
+      if (cur) {
+        cur.position = [...prev.position];
+        cur.rotationY = prev.rotationY;
+        cur.scale = prev.scale;
+        cur.level = prev.level;
+        const mesh = this.itemMeshes.get(instanceId);
+        if (mesh) {
+          mesh.position.set(cur.position[0], cur.position[1], cur.position[2]);
+          mesh.rotation.y = cur.rotationY;
+          mesh.scale.setScalar(cur.scale);
+        }
+      }
+      this.selectItem(null);
+      this.save();
+    }
+
+    this.bridge.playClickSound();
+    this.notify('editingModeChanged', { isEditing: false, item: null, isNew: false });
+    this.notify('ofrendaUpdated', this.data);
+  }
+
+  public isEditing(): boolean {
+    return this.editingBackup !== null;
+  }
+
+  public getEditingState(): { instanceId: string; isNew: boolean } | null {
+    if (!this.editingBackup) return null;
+    return { instanceId: this.editingBackup.instanceId, isNew: this.editingBackup.isNew };
   }
 
   /**
@@ -340,7 +431,7 @@ export class OfrendaEditor {
     }
 
     this.data.items.push(newItem);
-    this.selectItem(instanceId);
+    this.startEditing(instanceId, true);
 
     this.bridge.playSuccessSound();
     this.save();

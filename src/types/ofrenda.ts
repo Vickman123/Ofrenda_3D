@@ -12,11 +12,14 @@ export type ItemCategory =
   | 'musica'
   | 'papel_picado';
 
+export type SimpleCategory = 'flores' | 'velas' | 'fotografias' | 'alimentos' | 'adornos';
+
 export interface ItemTemplate {
   id: string;
   name: string;
   shortName: string;
   category: ItemCategory;
+  simpleCategory: SimpleCategory;
   description: string;
   defaultScale: number;
   recommendedLevel: 0 | 1 | 2 | 3;

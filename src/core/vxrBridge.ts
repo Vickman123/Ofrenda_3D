@@ -162,6 +162,50 @@ export class VXRBridge {
   }
 
   /**
+   * Genera una captura de imagen de alta calidad de la ofrenda completa
+   * utilizando un encuadre de cámara fotográfica independiente y sin modificar la escena original.
+   */
+  public captureOfrendaImage(width: number = 1920, height: number = 1080): string {
+    const scene = this.app.scene.nativeScene;
+
+    // 1. Crear cámara de encuadre fotográfico independiente perfectamente centrado en el altar completo
+    const captureCam = new THREE.PerspectiveCamera(46, width / height, 0.1, 50);
+    captureCam.position.set(0, 1.25, 3.8);
+    captureCam.lookAt(0, 0.88, -0.1);
+
+    try {
+      // 2. Renderizador fuera de pantalla con buffer persistente
+      const tempRenderer = new THREE.WebGLRenderer({
+        antialias: true,
+        preserveDrawingBuffer: true,
+        alpha: false,
+      });
+      tempRenderer.setSize(width, height);
+      tempRenderer.outputColorSpace = THREE.SRGBColorSpace;
+      tempRenderer.toneMapping = THREE.ACESFilmicToneMapping;
+      tempRenderer.toneMappingExposure = 1.15;
+      tempRenderer.shadowMap.enabled = true;
+      tempRenderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+      tempRenderer.render(scene, captureCam);
+      const dataUrl = tempRenderer.domElement.toDataURL('image/jpeg', 0.94);
+      tempRenderer.dispose();
+      return dataUrl;
+    } catch (err) {
+      console.warn('[VXRBridge] Fallback a renderizador nativo para captura:', err);
+      const renderer = this.app.renderer.nativeRenderer;
+      const prevTarget = renderer.getRenderTarget();
+      renderer.render(scene, captureCam);
+      const dataUrl = renderer.domElement.toDataURL('image/jpeg', 0.92);
+      renderer.setRenderTarget(prevTarget);
+      requestAnimationFrame(() => {
+        renderer.render(scene, this.app.renderer.camera);
+      });
+      return dataUrl;
+    }
+  }
+
+  /**
    * Inicia el bucle de renderizado WebGL/WebXR de VXR Core.
    */
   public start(): void {
